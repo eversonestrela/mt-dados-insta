@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}Painel{% endblock %} · MT em Dados</title>
+<link rel="stylesheet" href="/static/estilo.css">
+<style>
+@font-face { font-family: "Inter"; src: url("/static/fontes/Inter-Regular.otf"); font-weight: 400; }
+@font-face { font-family: "Inter"; src: url("/static/fontes/Inter-SemiBold.otf"); font-weight: 600; }
+@font-face { font-family: "Inter"; src: url("/static/fontes/Inter-Bold.otf"); font-weight: 700; }
+@font-face { font-family: "Inter"; src: url("/static/fontes/Inter-ExtraBold.otf"); font-weight: 800; }
+@font-face { font-family: "Lora"; src: url("/static/fontes/Lora-Variable.ttf"); font-weight: 400 700; }
+</style>
+</head>
+<body>
+<aside class="lateral">
+  <div class="marca">MT em Dados<small>gerador de posts · local</small></div>
+  {% set caminho = request.url.path %}
+  <nav>
+    <a href="/" class="{{ 'ativo' if caminho == '/' }}">Painel</a>
+    <a href="/fila?status=revisao" class="{{ 'ativo' if caminho.startswith('/fila') or caminho.startswith('/post') }}">Revisão
+      {% if n_revisao %}<span class="bolha">{{ n_revisao }}</span>{% endif %}</a>
+    <a href="/fila?status=aprovado">Agendados</a>
+    <a href="/fila?status=publicado">Publicados</a>
+    <a href="/fila?status=erro">Erros {% if n_erro %}<span class="bolha erro">{{ n_erro }}</span>{% endif %}</a>
+    <a href="/contas" class="{{ 'ativo' if caminho.startswith('/contas') }}">Contas do Instagram</a>
+    <a href="/config" class="{{ 'ativo' if caminho.startswith('/config') }}">Configurações</a>
+    <a href="/uso" class="{{ 'ativo' if caminho.startswith('/uso') }}">Uso do Claude</a>
+    <a href="/registro" class="{{ 'ativo' if caminho.startswith('/registro') }}">Registro</a>
+  </nav>
+  <div class="medidor-lateral">
+    {% if ia_ativa %}
+      {% set pct = (100 * uso.dia / uso.limite_dia) if uso.limite_dia else 100 %}
+      Claude hoje: {{ uso.dia|milhar }} de {{ uso.limite_dia|milhar }} tokens
+      <div class="barra"><span class="{{ 'cheio' if pct >= 95 else ('alto' if pct >= 70) }}" style="width: {{ [pct, 100]|min }}%"></span></div>
+    {% else %}
+      Claude desligado · textos-modelo
+    {% endif %}
+  </div>
+</aside>
+<main>
+  {% if msg %}<div class="aviso">{{ msg }}</div>{% endif %}
+  {% if erro %}<div class="aviso erro">{{ erro }}</div>{% endif %}
+  {% block conteudo %}{% endblock %}
+</main>
+{% block scripts %}{% endblock %}
+</body>
+</html>

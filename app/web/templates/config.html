@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block titulo %}Configurações{% endblock %}
+{% block conteudo %}
+<div class="topo"><div><h1>Configurações</h1></div></div>
+
+<form method="post" action="/config/salvar">
+<fieldset>
+  <legend>Claude</legend>
+  <label class="check"><input type="checkbox" name="ia_ativa" value="1" {{ 'checked' if ia_ativa }}>
+    <span>Usar o Claude para escrever as legendas <span class="discreto">(desligado = modelos de texto prontos, sem custo nenhum)</span></span></label>
+
+  <label>Como chamar o Claude</label>
+  <label class="check"><input type="radio" name="ia_provedor" value="claude_code" {{ 'checked' if v.ia_provedor == 'claude_code' }}>
+    <span><strong>Minha assinatura (Claude Code)</strong> · usa o comando <code>claude</code>, logado no seu plano Pro. Sem cobrança por token; consome o limite de uso do plano.</span></label>
+  <label class="check"><input type="radio" name="ia_provedor" value="api" {{ 'checked' if v.ia_provedor == 'api' }}>
+    <span><strong>Chave de API</strong> · cobrança por token no Console da Anthropic.</span></label>
+
+  {% if v.ia_provedor == 'claude_code' %}
+    {% if login %}
+      <div class="aviso {{ '' if login.ok else 'erro' }}" style="margin-top:12px">{{ login.msg }}{% if caminho_claude %} <span class="discreto">({{ caminho_claude }})</span>{% endif %}</div>
+    {% endif %}
+    <label>Caminho do comando claude <span class="discreto">(deixe vazio para achar sozinho)</span></label>
+    <input type="text" name="claude_caminho" value="{{ v.claude_caminho }}" placeholder="C:\Users\voce\.local\bin\claude.exe">
+  {% else %}
+    <label>Chave da API <span class="discreto">{{ '(já salva; deixe vazio para manter)' if v.tem_chave_api else '' }}</span></label>
+    <input type="password" name="anthropic_chave" autocomplete="off" placeholder="sk-ant-…">
+  {% endif %}
+
+  <div class="grade c2">
+    <div>
+      <label>Modelo</label>
+      <select name="ia_modelo">
+        {% for m, nome in [('haiku','Haiku (rápido, gasta menos)'),('sonnet','Sonnet (escreve melhor)'),('opus','Opus (o mais forte, gasta mais)')] %}
+          <option value="{{ m }}" {{ 'selected' if v.ia_modelo == m }}>{{ nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Máximo de tokens por resposta</label>
+      <input type="number" name="ia_max_saida" value="{{ v.ia_max_saida }}" min="100" max="2000">
+    </div>
+    <div>
+      <label>Limite de tokens por dia <span class="discreto">(entrada + saída)</span></label>
+      <input type="number" name="ia_limite_diario" value="{{ v.ia_limite_diario }}" min="0">
+    </div>
+    <div>
+      <label>Limite de tokens por mês</label>
+      <input type="number" name="ia_limite_mensal" value="{{ v.ia_limite_mensal }}" min="0">
+    </div>
+  </div>
+  <p class="discreto">Antes de cada chamada o programa reserva a estimativa de tokens e recusa se ela passar de qualquer limite. Quando o limite acaba, os posts continuam saindo com os textos-modelo.</p>
+</fieldset>
+
+<fieldset>
+  <legend>Hospedagem das imagens</legend>
+  <p class="discreto">O Instagram só aceita mídia por link público. O programa envia o arquivo, publica e apaga.</p>
+  <label class="check"><input type="radio" name="hospedagem" value="cloudinary" {{ 'checked' if v.hospedagem == 'cloudinary' }}>
+    <span><strong>Cloudinary</strong> (grátis, recomendado)</span></label>
+  <label class="check"><input type="radio" name="hospedagem" value="url_publica" {{ 'checked' if v.hospedagem == 'url_publica' }}>
+    <span><strong>Meu próprio túnel</strong> · o programa serve só a pasta de mídia na porta 8766, e você expõe essa porta (ex.: Cloudflare Tunnel)</span></label>
+  <div class="grade c3">
+    <div><label>Cloudinary: cloud name</label><input type="text" name="cloudinary_cloud" value="{{ v.cloudinary_cloud }}"></div>
+    <div><label>Cloudinary: API key</label><input type="text" name="cloudinary_key" value="{{ v.cloudinary_key }}"></div>
+    <div><label>Cloudinary: API secret <span class="discreto">{{ '(salvo)' if v.tem_segredo_cloudinary }}</span></label><input type="password" name="cloudinary_segredo" autocomplete="off"></div>
+  </div>
+  <label>URL pública do túnel <span class="discreto">(só no modo túnel)</span></label>
+  <input type="text" name="url_publica_base" value="{{ v.url_publica_base }}" placeholder="https://midia.seudominio.com.br">
+</fieldset>
+
+<fieldset>
+  <legend>Geração e fontes de dados</legend>
+  <div class="grade c3">
+    <div><label>Gerar a pauta todo dia às</label><input type="time" name="geracao_horario" value="{{ v.geracao_horario }}"></div>
+    <div><label>Mínimo de posts por dia (por conta)</label><input type="number" name="posts_por_dia" value="{{ v.posts_por_dia }}" min="1" max="20"></div>
+    <div><label>Fuso horário</label><input type="text" name="fuso" value="{{ v.fuso }}"></div>
+  </div>
+  <label>Satélite de referência das queimadas <span class="discreto">(padrão do INPE: AQUA_M-T)</span></label>
+  <input type="text" name="satelite_referencia" value="{{ v.satelite_referencia }}" style="max-width:220px">
+  <label>Cidades do clima <span class="discreto">(nome;latitude;longitude, separadas por |, a primeira é a principal)</span></label>
+  <input type="text" name="clima_cidades" value="{{ v.clima_cidades }}">
+  <label>Palavras buscadas nos diários oficiais <span class="discreto">(separadas por ;)</span></label>
+  <input type="text" name="diario_termos" value="{{ v.diario_termos }}">
+  <p class="discreto">Datas próprias (aniversários de cidades, campanhas) ficam no arquivo <code>dados/agenda.csv</code>. Fotos reais suas para as capas ficam em <code>dados/fotos/&lt;código IBGE&gt;/</code>.</p>
+</fieldset>
+
+<div class="acoes"><button class="primario">Salvar configurações</button></div>
+</form>
+
+<div class="acoes" style="margin-top:24px">
+  <form method="post" action="/config/testar-claude"><button>Testar o Claude <span class="discreto">(~30 tokens)</span></button></form>
+  <form method="post" action="/config/testar-hospedagem"><button>Testar hospedagem</button></form>
+</div>
+{% endblock %}

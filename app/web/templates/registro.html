@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block titulo %}Registro{% endblock %}
+{% block conteudo %}
+<div class="topo"><div><h1>Registro</h1><p>O que o programa fez, do mais recente para o mais antigo.</p></div></div>
+{% if linhas %}
+<table>
+  <tr><th style="width:150px">Quando</th><th style="width:70px">Tipo</th><th>Mensagem</th></tr>
+  {% for l in linhas %}<tr class="{{ 'erro' if l.nivel == 'erro' }}"><td>{{ l.momento[:16]|replace('T',' ') }}</td><td>{{ l.nivel }}</td><td>{{ l.msg }}</td></tr>{% endfor %}
+</table>
+{% else %}<div class="vazio">Nada registrado ainda.</div>{% endif %}
+{% endblock %}

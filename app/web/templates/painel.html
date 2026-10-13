@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block titulo %}Painel{% endblock %}
+{% block conteudo %}
+<div class="topo">
+  <div>
+    <h1>Hoje</h1>
+    <p>Pauta gerada todo dia às {{ horario }}{% if ultima %} · última geração: {{ ultima }}{% endif %}</p>
+  </div>
+</div>
+
+{% if not contas %}
+  <div class="aviso atencao">Nenhuma conta cadastrada ainda. Comece em <a href="/contas">Contas do Instagram</a>. Você pode gerar posts antes mesmo de conectar o Instagram, só para ver como ficam.</div>
+{% endif %}
+{% if login and not login.ok %}
+  <div class="aviso erro">Claude: {{ login.msg }}</div>
+{% endif %}
+
+<div class="grade c4">
+  <a class="cartao" href="/fila?status=revisao" style="text-decoration:none">
+    <div class="rotulo">Para revisar</div><div class="numero">{{ n_revisao }}</div>
+    <div class="discreto">em todas as contas</div>
+  </a>
+  <a class="cartao" href="/fila?status=aprovado" style="text-decoration:none">
+    <div class="rotulo">Aprovados hoje</div><div class="numero">{{ cont.get('aprovado', 0) }}</div>
+    <div class="discreto">aguardando o horário</div>
+  </a>
+  <a class="cartao" href="/fila?status=publicado" style="text-decoration:none">
+    <div class="rotulo">Publicados hoje</div><div class="numero">{{ cont.get('publicado', 0) }}</div>
+    <div class="discreto">&nbsp;</div>
+  </a>
+  <div class="cartao">
+    <div class="rotulo">Claude</div>
+    {% if ia_ativa %}
+      <div class="numero" style="font-size:26px">{{ uso.resta_dia|milhar }}</div>
+      <div class="discreto">tokens livres hoje · mês: {{ uso.mes|milhar }} de {{ uso.limite_mes|milhar }}</div>
+    {% else %}
+      <div class="numero" style="font-size:26px">Desligado</div>
+      <div class="discreto">legendas pelos modelos prontos · <a href="/config">ligar</a></div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grade c2" style="margin-top:16px">
+  <div class="cartao">
+    <h3>Próximas publicações</h3>
+    {% if proximos %}
+    <ul class="proximos">
+      {% for p in proximos %}
+      <li>
+        <span class="hora">{{ p.agendado_para|hora }}</span>
+        {% if p.midias %}<img src="/midia/{{ p.midias[-1] if p.tipo == 'reel' else p.midias[0] }}" alt="">{% endif %}
+        <a href="/post/{{ p.id }}" style="flex:1">{{ p.titulo }}</a>
+        <span class="tag {{ p.status }}">{{ STATUS[p.status] }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="discreto">Nada agendado daqui para frente.</p>{% endif %}
+  </div>
+  <div class="cartao">
+    <h3>Gerar agora</h3>
+    <p class="discreto">Normalmente é automático. Use para testar ou se quiser refazer o dia.</p>
+    {% for c in contas %}
+      <form method="post" action="/gerar" class="acoes" style="margin-top:8px; align-items:center">
+        <input type="hidden" name="conta_id" value="{{ c.id }}">
+        <strong style="min-width:140px">{{ c.nome }}</strong>
+        <button class="primario pequeno">Gerar pauta de hoje</button>
+        <label class="check" style="margin:0"><input type="checkbox" name="forcar" value="1"> gerar mesmo se já houver</label>
+      </form>
+    {% else %}
+      <p class="discreto">Cadastre uma conta primeiro.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

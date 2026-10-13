@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block titulo %}Contas{% endblock %}
+{% block conteudo %}
+<div class="topo">
+  <div>
+    <h1>Contas do Instagram</h1>
+    <p>Cada conta tem seus horários, pautas e cor. Os tokens ficam criptografados neste computador.</p>
+  </div>
+  {% if atual %}<a class="botao" href="/contas">+ Nova conta</a>{% endif %}
+</div>
+
+{% if contas %}
+<table style="margin-bottom:28px">
+  <tr><th>Conta</th><th>Instagram</th><th>Horários</th><th>Token</th><th>Situação</th><th></th></tr>
+  {% for c in contas %}
+  <tr>
+    <td><strong>{{ c.nome }}</strong><br><span class="discreto">{{ '@' ~ c.arroba if c.arroba }}</span></td>
+    <td>{{ c.ig_user_id or '—' }}<br><span class="discreto">{{ c.api_host }}</span></td>
+    <td>{{ c.horarios|replace('"','')|replace('[','')|replace(']','')|replace(',', ', ') }}</td>
+    <td>{% if c.token_cifrado %}salvo{% if c.token_expira_em %}<br><span class="discreto">vence {{ c.token_expira_em[:10] }}</span>{% endif %}{% else %}<span class="perigo">falta</span>{% endif %}</td>
+    <td>{% if c.ativa %}<span class="tag aprovado">ativa</span>{% else %}<span class="tag">pausada</span>{% endif %}
+        {% if c.auto_aprovar %}<br><span class="tag revisao">aprova sozinha</span>{% endif %}</td>
+    <td style="white-space:nowrap">
+      <a class="botao pequeno" href="/contas?editar={{ c.id }}">Editar</a>
+      <form class="inline" method="post" action="/contas/{{ c.id }}/testar"><button class="pequeno">Testar conexão</button></form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<form method="post" action="/contas/salvar">
+  {% if atual %}<input type="hidden" name="conta_id" value="{{ atual.id }}">{% endif %}
+  <fieldset>
+    <legend>{{ 'Editar ' ~ atual.nome if atual else 'Nova conta' }}</legend>
+    <div class="grade c2">
+      <div>
+        <label>Nome interno</label>
+        <input type="text" name="nome" required value="{{ atual.nome if atual }}" placeholder="MT em Dados">
+      </div>
+      <div>
+        <label>@ do perfil <span class="discreto">(aparece nas artes)</span></label>
+        <input type="text" name="arroba" value="{{ atual.arroba if atual }}" placeholder="mtemdados">
+      </div>
+    </div>
+
+    <label>Token de acesso <span class="discreto">{{ '(deixe vazio para manter o atual)' if atual and atual.token_cifrado else '(long-lived, gerado no app da Meta)' }}</span></label>
+    <input type="password" name="token" autocomplete="off" placeholder="IGAA…">
+    <div class="grade c3">
+      <div>
+        <label>Tipo de login da Meta</label>
+        <select name="api_host">
+          <option value="graph.instagram.com" {{ 'selected' if not atual or atual.api_host == 'graph.instagram.com' }}>Instagram Login (recomendado)</option>
+          <option value="graph.facebook.com" {{ 'selected' if atual and atual.api_host == 'graph.facebook.com' }}>Facebook Login (via Página)</option>
+        </select>
+      </div>
+      <div>
+        <label>ID da conta no Instagram <span class="discreto">(preenche sozinho ao testar)</span></label>
+        <input type="text" name="ig_user_id" value="{{ atual.ig_user_id if atual }}">
+      </div>
+      <div>
+        <label>Versão da API</label>
+        <input type="text" name="api_versao" value="{{ atual.api_versao if atual else 'v26.0' }}">
+      </div>
+    </div>
+    <label>Token vence em <span class="discreto">(opcional; renovação automática a cada 60 dias no Instagram Login)</span></label>
+    <input type="datetime-local" name="token_expira_em" value="{{ (atual.token_expira_em or '')[:16] if atual }}" style="max-width:280px">
+
+    <label>Horários de publicação <span class="discreto">(separe por vírgula; um post por horário, na ordem de prioridade)</span></label>
+    <input type="text" name="horarios" value="{{ atual.horarios_txt if atual else '07:30, 11:30, 13:00, 18:00, 20:30' }}">
+
+    <label>Pautas desta conta</label>
+    {% for chave, nome in PAUTAS.items() %}
+      <label class="check"><input type="checkbox" name="pautas" value="{{ chave }}" {{ 'checked' if not atual or chave in atual.pautas_lista }}> {{ nome }}</label>
+    {% endfor %}
+
+    <div class="grade c2">
+      <div>
+        <label>Municípios em foco <span class="discreto">(códigos IBGE separados por vírgula; vazio = MT inteiro)</span></label>
+        <input type="text" name="municipios_foco" value="{{ atual.municipios_foco if atual }}" placeholder="5103403 (Cuiabá), 5108402 (Várzea Grande)">
+      </div>
+      <div>
+        <label>Cor de destaque das artes</label>
+        <input type="text" name="cor_destaque" value="{{ atual.cor_destaque if atual else '#B4441C' }}" style="max-width:160px">
+      </div>
+    </div>
+
+    <label class="check"><input type="checkbox" name="ativa" value="1" {{ 'checked' if not atual or atual.ativa }}> Conta ativa (gera e publica)</label>
+    <label class="check"><input type="checkbox" name="auto_aprovar" value="1" {{ 'checked' if atual and atual.auto_aprovar }}>
+      <span>Aprovar sozinho os posts sem avisos <span class="discreto">(diário oficial sempre passa por você)</span></span></label>
+
+    <div class="acoes">
+      <button class="primario">Salvar conta</button>
+      {% if atual %}<a class="botao" href="/contas">Cancelar</a>{% endif %}
+    </div>
+  </fieldset>
+</form>
+{% if atual %}
+<form method="post" action="/contas/{{ atual.id }}/excluir" onsubmit="return confirm('Remover esta conta? Posts não publicados serão apagados.')">
+  <button class="perigo pequeno">Remover conta</button>
+</form>
+{% endif %}
+{% endblock %}

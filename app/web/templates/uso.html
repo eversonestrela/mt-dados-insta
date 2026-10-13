@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block titulo %}Uso do Claude{% endblock %}
+{% block conteudo %}
+<div class="topo"><div><h1>Uso do Claude</h1><p>Contagem feita pelo próprio programa a cada chamada.</p></div></div>
+<div class="grade c2">
+  <div class="cartao">
+    <div class="rotulo">Hoje</div>
+    <div class="numero">{{ uso.dia|milhar }}</div>
+    {% set pd = (100 * uso.dia / uso.limite_dia) if uso.limite_dia else 100 %}
+    <div class="barra"><span class="{{ 'cheio' if pd >= 95 else ('alto' if pd >= 70) }}" style="width: {{ [pd,100]|min }}%"></span></div>
+    <div class="discreto">limite de {{ uso.limite_dia|milhar }} tokens · {{ uso.chamadas_dia }} chamadas</div>
+  </div>
+  <div class="cartao">
+    <div class="rotulo">Este mês</div>
+    <div class="numero">{{ uso.mes|milhar }}</div>
+    {% set pm = (100 * uso.mes / uso.limite_mes) if uso.limite_mes else 100 %}
+    <div class="barra"><span class="{{ 'cheio' if pm >= 95 else ('alto' if pm >= 70) }}" style="width: {{ [pm,100]|min }}%"></span></div>
+    <div class="discreto">limite de {{ uso.limite_mes|milhar }} tokens</div>
+  </div>
+</div>
+
+<h2>Por dia</h2>
+{% if por_dia %}
+<table>
+  <tr><th>Dia</th><th class="num">Chamadas</th><th class="num">Entrada</th><th class="num">Saída</th><th class="num">Total</th></tr>
+  {% for d in por_dia %}<tr><td>{{ d.dia }}</td><td class="num">{{ d.n }}</td><td class="num">{{ d.e|milhar }}</td><td class="num">{{ d.s|milhar }}</td><td class="num"><strong>{{ (d.e + d.s)|milhar }}</strong></td></tr>{% endfor %}
+</table>
+{% else %}<div class="vazio">Nenhuma chamada ainda.</div>{% endif %}
+
+<h2>Últimas chamadas</h2>
+{% if linhas %}
+<table>
+  <tr><th>Quando</th><th>Para quê</th><th>Modelo</th><th class="num">Entrada</th><th class="num">Saída</th><th>Post</th></tr>
+  {% for l in linhas %}<tr><td>{{ l.momento[:16]|replace('T',' ') }}</td><td>{{ l.finalidade }}</td><td>{{ l.modelo }}</td><td class="num">{{ l.entrada|milhar }}</td><td class="num">{{ l.saida|milhar }}</td><td>{% if l.post_id %}<a href="/post/{{ l.post_id }}">#{{ l.post_id }}</a>{% endif %}</td></tr>{% endfor %}
+</table>
+{% endif %}
+{% endblock %}

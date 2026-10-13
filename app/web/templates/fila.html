@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block titulo %}{{ STATUS.get(status, 'Todos') }}{% endblock %}
+{% block conteudo %}
+<div class="topo">
+  <div>
+    <h1>{{ {'revisao':'Revisão','aprovado':'Agendados','publicado':'Publicados','erro':'Erros','rejeitado':'Rejeitados','todos':'Todos os posts'}.get(status, status) }}</h1>
+    <p>{% if status == 'revisao' %}Abra cada post, leia a legenda e confira os dados antes de aprovar.{% elif status == 'aprovado' %}Saem sozinhos no horário marcado. O programa precisa estar aberto.{% endif %}</p>
+  </div>
+  {% if status == 'revisao' and posts %}
+  <form method="post" action="/fila/aprovar-sem-avisos" onsubmit="return confirm('Aprovar todos os posts que não têm avisos?')">
+    <button class="aprovar">Aprovar todos sem avisos</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="abas">
+  {% for s, nome in [('revisao','Para revisar'),('aprovado','Agendados'),('publicado','Publicados'),('erro','Erros'),('rejeitado','Rejeitados'),('todos','Todos')] %}
+    <a href="/fila?status={{ s }}{% if conta_sel %}&conta={{ conta_sel }}{% endif %}" class="{{ 'ativo' if s == status }}">{{ nome }}</a>
+  {% endfor %}
+  {% if contas|length > 1 %}
+    <span style="width:16px"></span>
+    {% for c in contas %}
+      <a href="/fila?status={{ status }}{% if conta_sel != c.id %}&conta={{ c.id }}{% endif %}" class="{{ 'ativo' if conta_sel == c.id }}">{{ c.nome }}</a>
+    {% endfor %}
+  {% endif %}
+</div>
+
+{% if posts %}
+<div class="fila">
+  {% for p in posts %}
+  <div class="post">
+    <a class="miniatura" href="/post/{{ p.id }}">
+      {% if p.midias %}
+        <img src="/midia/{{ p.midias[-1] if p.tipo == 'reel' else p.midias[0] }}" alt="" loading="lazy">
+        {% if p.tipo == 'carrossel' %}<span class="qtd">{{ p.midias|length }} imagens</span>{% endif %}
+        {% if p.tipo == 'reel' %}<span class="qtd">▶ vídeo</span>{% endif %}
+      {% endif %}
+    </a>
+    <div class="corpo">
+      <div class="linha1">
+        <span class="tag">{{ TIPOS[p.tipo] }}</span>
+        <span class="tag {{ p.status }}">{{ STATUS[p.status] }}</span>
+        {% if 'claude' in p.texto_por %}<span class="tag ia">Claude</span>{% endif %}
+        <span class="discreto">{{ p.agendado_para|hora }}</span>
+      </div>
+      <a class="titulo" href="/post/{{ p.id }}">{{ p.titulo }}</a>
+      {% if contas|length > 1 %}<span class="discreto">{{ p.conta_nome }}</span>{% endif %}
+      <div class="trecho">{{ p.legenda or ('Story, sem legenda' if p.tipo == 'story' else '') }}</div>
+      {% if p.avisos %}<div class="avisos">⚠ {{ p.avisos|length }} aviso(s) na legenda</div>{% endif %}
+      {% if p.revisao_obrigatoria %}<div class="avisos">Revisão obrigatória</div>{% endif %}
+      {% if p.erro %}<div class="avisos" style="color:var(--vermelho)">{{ p.erro[:140] }}</div>{% endif %}
+      {% if p.link %}<a href="{{ p.link }}" target="_blank" class="discreto">ver no Instagram ↗</a>{% endif %}
+      {% if p.status == 'revisao' %}
+      <div class="acoes">
+        <a class="botao pequeno" href="/post/{{ p.id }}">Revisar</a>
+        {% if not p.revisao_obrigatoria %}
+        <form class="inline" method="post" action="/post/{{ p.id }}/rapido"><input type="hidden" name="acao" value="aprovar"><button class="aprovar pequeno">Aprovar</button></form>
+        {% endif %}
+        <form class="inline" method="post" action="/post/{{ p.id }}/rapido"><input type="hidden" name="acao" value="rejeitar"><button class="pequeno perigo">Rejeitar</button></form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="vazio">Nada por aqui.</div>
+{% endif %}
+{% endblock %}

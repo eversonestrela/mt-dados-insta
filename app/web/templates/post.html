@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block titulo %}{{ p.titulo }}{% endblock %}
+{% block conteudo %}
+<div class="topo">
+  <div>
+    <p><a href="/fila?status={{ p.status }}">← voltar</a></p>
+    <h1>{{ p.titulo }}</h1>
+    <p>
+      <span class="tag">{{ TIPOS[p.tipo] }}</span>
+      <span class="tag {{ p.status }}">{{ STATUS[p.status] }}</span>
+      {% if 'claude' in p.texto_por %}<span class="tag ia">texto: {{ p.texto_por }}</span>{% else %}<span class="tag">texto: modelo pronto</span>{% endif %}
+      · {{ ct.nome }}{% if ct.arroba %} (@{{ ct.arroba }}){% endif %} · fonte: {{ p.fonte }}
+    </p>
+  </div>
+</div>
+
+{% if p.erro %}<div class="aviso erro">{{ p.erro }}</div>{% endif %}
+{% if p.link %}<div class="aviso">Publicado: <a href="{{ p.link }}" target="_blank">{{ p.link }}</a></div>{% endif %}
+
+<div class="detalhe">
+  <div class="midias">
+    {% if p.tipo == 'reel' and p.midias %}
+      <video class="principal" src="/midia/{{ p.midias[0] }}" controls playsinline poster="/midia/{{ p.midias[-1] }}"></video>
+    {% elif p.midias %}
+      <img class="principal" id="principal" src="/midia/{{ p.midias[0] }}" alt="">
+      {% if p.midias|length > 1 %}
+      <div class="miniaturas">
+        {% for m in p.midias %}<img src="/midia/{{ m }}" class="{{ 'sel' if loop.first }}" onclick="trocar(this)" alt="">{% endfor %}
+      </div>
+      {% endif %}
+    {% else %}
+      <div class="vazio">Sem mídia</div>
+    {% endif %}
+    <form method="post" action="/post/{{ p.id }}/arte" class="acoes">
+      <button class="pequeno">Gerar arte de novo</button>
+    </form>
+  </div>
+
+  <div>
+    <form method="post" action="/post/{{ p.id }}/salvar" id="form-post">
+      {% if p.tipo != 'story' %}
+        <label for="legenda">Legenda</label>
+        <textarea id="legenda" name="legenda" oninput="contar()">{{ p.legenda }}</textarea>
+        <div class="contador"><span id="cont">0</span> / {{ limite }} caracteres</div>
+      {% else %}
+        <p class="discreto">Stories não levam legenda pela API. O texto está na própria imagem.</p>
+      {% endif %}
+      {% if p.avisos %}
+        <ul class="lista-avisos">{% for a in p.avisos %}<li>{{ a }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if p.revisao_obrigatoria %}
+        <div class="aviso atencao" style="margin-top:12px">Este post resume um documento oficial. Abra o original e confira antes de aprovar{% if p.dados.url %}: <a href="{{ p.dados.url }}" target="_blank">diário oficial</a>{% endif %}.</div>
+      {% endif %}
+      <label for="agendado_para">Publicar em</label>
+      <input type="datetime-local" id="agendado_para" name="agendado_para" value="{{ (p.agendado_para or '')[:16] }}">
+      <div class="acoes">
+        {% if p.status in ('revisao', 'erro', 'rejeitado') %}
+          <button class="aprovar" name="acao" value="aprovar">Salvar e aprovar</button>
+        {% endif %}
+        <button name="acao" value="salvar">Salvar</button>
+        {% if p.status == 'aprovado' %}<button name="acao" value="revisao">Voltar para revisão</button>{% endif %}
+        {% if p.status != 'publicado' %}<button class="perigo" name="acao" value="rejeitar">Rejeitar</button>{% endif %}
+      </div>
+    </form>
+
+    {% if p.status != 'publicado' %}
+    <form method="post" action="/post/{{ p.id }}/publicar" class="acoes" onsubmit="return confirm('Publicar agora no Instagram? Salve a legenda antes, se tiver mudado algo.')">
+      <button class="primario">Publicar agora</button>
+    </form>
+    {% endif %}
+
+    {% if p.tipo != 'story' and p.status != 'publicado' %}
+    <details {% if not p.legenda %}open{% endif %}>
+      <summary>Reescrever com o Claude</summary>
+      {% if ia_ativa %}
+      <form method="post" action="/post/{{ p.id }}/reescrever">
+        <label for="instrucao">Pedido (opcional) <span class="discreto">ex.: "mais curta", "comece pelo município"</span></label>
+        <input type="text" id="instrucao" name="instrucao">
+        <p class="discreto">Custa cerca de {{ estimativa|milhar }} tokens. Restam {{ uso.resta_dia|milhar }} hoje. Se o Claude usar algum número que não está nos dados, o texto é descartado.</p>
+        <button>Reescrever</button>
+      </form>
+      {% else %}
+        <p class="discreto">O Claude está desligado. <a href="/config">Ligar nas configurações</a>.</p>
+      {% endif %}
+    </details>
+    {% endif %}
+
+    <details open>
+      <summary>Dados usados (confira com a imagem e a legenda)</summary>
+      <ul>{% for f in fatos %}<li>{{ f }}</li>{% endfor %}</ul>
+      {% if p.dados.url %}<p><a href="{{ p.dados.url }}" target="_blank">Abrir documento original ↗</a></p>{% endif %}
+    </details>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function trocar(el) {
+  document.getElementById('principal').src = el.src;
+  document.querySelectorAll('.miniaturas img').forEach(i => i.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function contar() {
+  const t = document.getElementById('legenda');
+  if (t) document.getElementById('cont').textContent = t.value.length;
+}
+contar();
+</script>
+{% endblock %}
